@@ -54,6 +54,7 @@ import net.opentsdb.query.serdes.SerdesOptions;
 import net.opentsdb.query.serdes.TimeSeriesSerdes;
 import net.opentsdb.stats.Span;
 import net.opentsdb.utils.Exceptions;
+import net.opentsdb.utils.JSON;
 
 /**
  * Simple serializer that outputs the time series in the same format as
@@ -70,25 +71,11 @@ public class JsonV2QuerySerdes implements TimeSeriesSerdes, TSDBPlugin {
   private static final Logger LOG = LoggerFactory.getLogger(
       JsonV2QuerySerdes.class);
   
-  /** The JSON generator used for writing. */
-  private final JsonGenerator json;
-  
-  /**
-   * Unused ctor for the plugin for now. TEMP!
-   */
-  public JsonV2QuerySerdes() {
-    json = null;
-  }
-  
   /**
    * Default ctor.
-   * @param generator A non-null JSON generator.
    */
-  public JsonV2QuerySerdes(final JsonGenerator generator) {
-    if (generator == null) {
-      throw new IllegalArgumentException("Generator can not be null.");
-    }
-    this.json = generator;
+  public JsonV2QuerySerdes() {
+
   }
   
   @SuppressWarnings("unchecked")
@@ -114,6 +101,20 @@ public class JsonV2QuerySerdes implements TimeSeriesSerdes, TSDBPlugin {
     } else {
       opts = null;
     }
+    
+    final JsonGenerator json;
+    try {
+      json = JSON.getFactory().createGenerator(stream);
+    } catch (IOException e) {
+      throw new RuntimeException("WTF?", e);
+    }
+    
+    try {
+      json.writeStartArray();
+    } catch (IOException e) {
+      throw new RuntimeException("WTF?", e);
+    }
+    
     final net.opentsdb.query.pojo.TimeSeriesQuery query = 
         (net.opentsdb.query.pojo.TimeSeriesQuery) context.query();
     final List<TimeSeries> series;
@@ -259,6 +260,10 @@ public class JsonV2QuerySerdes implements TimeSeriesSerdes, TSDBPlugin {
           }
           
           json.flush();
+          
+          json.writeEndArray();
+          json.close();
+          
         } catch (Exception e) {
           LOG.error("Unexpected exception", e);
           return Deferred.fromError(new QueryExecutionException(

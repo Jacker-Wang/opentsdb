@@ -23,6 +23,10 @@ import net.opentsdb.data.TimeStamp;
  */
 public interface SerdesOptions {
   
+  public String getId();
+  
+  public String getType();
+  
   /** @return The inclusive start boundary of the serialization. */
   public TimeStamp start();
   

@@ -32,7 +32,6 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
 import com.stumbleupon.async.Deferred;
@@ -50,7 +49,6 @@ import net.opentsdb.query.pojo.TimeSeriesQuery;
 import net.opentsdb.query.pojo.Timespan;
 import net.opentsdb.query.serdes.SerdesOptions;
 import net.opentsdb.storage.TimeSeriesDataStore;
-import net.opentsdb.utils.JSON;
 import net.opentsdb.utils.UnitTestException;
 
 public class TestJsonV2QuerySerdes {
@@ -104,8 +102,7 @@ public class TestJsonV2QuerySerdes {
   @Test
   public void serializeFull() throws Exception {
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final JsonGenerator generator = JSON.getFactory().createGenerator(output);
-    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(generator);
+    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
     serdes.serialize(context, null, output, result, null);
     output.close();
     final String json = new String(output.toByteArray(), Const.UTF8_CHARSET);
@@ -132,8 +129,7 @@ public class TestJsonV2QuerySerdes {
         .setEnd(new MillisecondTimeStamp(1486045860000L))
         .build();
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final JsonGenerator generator = JSON.getFactory().createGenerator(output);
-    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(generator);
+    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
     serdes.serialize(context, conf, output, result, null);
     output.close();
     final String json = new String(output.toByteArray(), Const.UTF8_CHARSET);
@@ -162,8 +158,7 @@ public class TestJsonV2QuerySerdes {
     when(context.query()).thenReturn(query);
     
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final JsonGenerator generator = JSON.getFactory().createGenerator(output);
-    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(generator);
+    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
     serdes.serialize(context, null, output, result, null);
     output.close();
     final String json = new String(output.toByteArray(), Const.UTF8_CHARSET);
@@ -192,8 +187,7 @@ public class TestJsonV2QuerySerdes {
     when(context.query()).thenReturn(query);
     
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final JsonGenerator generator = JSON.getFactory().createGenerator(output);
-    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(generator);
+    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
     serdes.serialize(context, null, output, result, null);
     output.close();
     final String json = new String(output.toByteArray(), Const.UTF8_CHARSET);
@@ -222,12 +216,11 @@ public class TestJsonV2QuerySerdes {
     when(context.query()).thenReturn(query);
     
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final JsonGenerator generator = JSON.getFactory().createGenerator(output);
-    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(generator);
+    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
     serdes.serialize(context, null, output, result, null);
     output.close();
     final String json = new String(output.toByteArray(), Const.UTF8_CHARSET);
-    assertTrue(json.isEmpty());
+    assertEquals("[]", json);
   }
   
   @Test
@@ -240,37 +233,28 @@ public class TestJsonV2QuerySerdes {
     when(context.query()).thenReturn(query);
     
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final JsonGenerator generator = JSON.getFactory().createGenerator(output);
-    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(generator);
+    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
     serdes.serialize(context, null, output, result, null);
     output.close();
     final String json = new String(output.toByteArray(), Const.UTF8_CHARSET);
-    assertTrue(json.isEmpty());
+    assertEquals("[]", json);
   }
   
   @Test
   public void serializeEmpty() throws Exception {
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final JsonGenerator generator = JSON.getFactory().createGenerator(output);
-    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(generator);
+    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
     when(result.timeSeries()).thenReturn(Collections.emptyList());
     serdes.serialize(context, null, output, result, null);
     output.close();
     final String json = new String(output.toByteArray(), Const.UTF8_CHARSET);
-    assertEquals("", json);
+    assertEquals("[]", json);
   }
 
   @Test
   public void serializeExceptions() throws Exception {
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final JsonGenerator generator = JSON.getFactory().createGenerator(output);
-    
-    try {
-      new JsonV2QuerySerdes(null);
-      fail("Expected IllegalArgumentException");
-    } catch (IllegalArgumentException e) { }
-    
-    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(generator);
+    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
     
     try {
       serdes.serialize(context, null, null, result, null);
@@ -334,8 +318,7 @@ public class TestJsonV2QuerySerdes {
     when(result.timeSeries()).thenReturn(Lists.newArrayList(ts1, ts2));
     
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final JsonGenerator generator = JSON.getFactory().createGenerator(output);
-    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(generator);
+    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
     serdes.serialize(context, null, output, result, null);
     output.close();
     final String json = new String(output.toByteArray(), Const.UTF8_CHARSET);
@@ -398,8 +381,7 @@ public class TestJsonV2QuerySerdes {
     when(result.timeSeries()).thenReturn(Lists.newArrayList(ts1, ts2));
     
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final JsonGenerator generator = JSON.getFactory().createGenerator(output);
-    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(generator);
+    final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
     try {
       serdes.serialize(context, null, output, result, null).join();
       fail("Expected UnitTestException");

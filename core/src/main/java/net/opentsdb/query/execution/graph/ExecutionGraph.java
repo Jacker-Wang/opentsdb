@@ -330,6 +330,7 @@ public class ExecutionGraph implements Comparable<ExecutionGraph> {
           }
         }
         try {
+          System.out.println("NODE CONFIG: " + factory.nodeConfigClass());
           final QueryNodeConfig node_config = 
               JSON.getMapper().treeToValue(config, factory.nodeConfigClass());
           node_builder.setConfig(node_config);

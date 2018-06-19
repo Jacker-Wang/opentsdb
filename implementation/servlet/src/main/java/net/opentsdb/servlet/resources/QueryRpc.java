@@ -485,7 +485,7 @@ final public class QueryRpc {
     /** The stream to write to. */
     final StreamingOutput stream = new StreamingOutput() {
       @Override
-      public void write(OutputStream output)
+      public void write(final OutputStream output)
           throws IOException, WebApplicationException {
         Span serdes_span = null;
         if (response_span != null) {
@@ -494,10 +494,8 @@ final public class QueryRpc {
               .asChildOf(response_span)
               .start();
         }
-        final JsonGenerator json = JSON.getFactory().createGenerator(output);
-        json.writeStartArray();
-        
-        final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes(json);
+
+        final JsonV2QuerySerdes serdes = new JsonV2QuerySerdes();
         try {
           // TODO - ug ug ugggg!!!
           serdes.serialize(context, options, output, result, serdes_span).join();
@@ -508,25 +506,7 @@ final public class QueryRpc {
           // TODO Auto-generated catch block
           e.printStackTrace();
         }
-        
-//        if (options.showSummary()) {
-//          json.writeObjectFieldStart("summary");
-//          json.writeStringField("queryHash", Bytes.byteArrayToString(
-//              query.buildTimelessHashCode().asBytes()));
-//          json.writeStringField("queryId", Bytes.byteArrayToString(
-//              query.buildHashCode().asBytes()));
-//          json.writeStringField("traceId", context.stats().trace() == null ? "null" : 
-//            context.stats().trace().traceId());
-//          if (context.stats().trace() != null) {
-//            //trace.serializeJSON("trace", json);
-//          }
-//          json.writeEndObject();
-//        }
-        
-        // final
-        json.writeEndArray();
-        json.close();
-        
+
         // TODO - trace, other bits.
         if (serdes_span != null) {
           serdes_span.setTag("finalThread", Thread.currentThread().getName())
