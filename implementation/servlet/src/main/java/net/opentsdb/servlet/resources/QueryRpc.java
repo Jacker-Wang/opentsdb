@@ -480,6 +480,7 @@ final public class QueryRpc {
         .setShowSummary(ts_query.getShowSummary())
         .setStart(query.getTime().startTime())
         .setEnd(query.getTime().endTime())
+        .setId("Json")
         .build();
     
     /** The stream to write to. */

@@ -204,7 +204,6 @@ public class TSDBV2QueryContextBuilder implements QueryContextBuilder {
       final net.opentsdb.query.pojo.TimeSeriesQuery q = 
           (net.opentsdb.query.pojo.TimeSeriesQuery) query;
       List<ExecutionGraphNode> nodes = Lists.newArrayList();
-      List<QueryNodeConfig> node_configs = Lists.newArrayList();
       
       for (final Metric metric : q.getMetrics()) {
         final net.opentsdb.query.pojo.TimeSeriesQuery.Builder sub_query = 
@@ -238,11 +237,11 @@ public class TSDBV2QueryContextBuilder implements QueryContextBuilder {
             .setMetric(metric.getMetric())
             // TODO types
             .build();
-        node_configs.add(config);
         
         nodes.add(ExecutionGraphNode.newBuilder()
             .setId(metric.getId())
             .setType("DataSource")
+            .setConfig(config)
             .build());
         
         final Downsampler downsampler = metric.getDownsampler() != null ? 
@@ -265,24 +264,27 @@ public class TSDBV2QueryContextBuilder implements QueryContextBuilder {
             ds.setTimeZone(downsampler.getTimezone());
           }
           
-          node_configs.add(ds.build());
           nodes.add(ExecutionGraphNode.newBuilder()
               .setId("downsample_" + metric.getId())
               .setType("Downsample")
               .addSource(previous_node)
+              .setConfig(ds.build())
               .build());
           previous_node = "downsample_" + metric.getId();
         }
         
         // Rate!
         if (metric.isRate()) {
-          node_configs.add(RateOptions.newBuilder(metric.getRateOptions())
-              .setId("rate_" + metric.getId())
-              .build());
+//          node_configs.add(RateOptions.newBuilder(metric.getRateOptions())
+//              .setId("rate_" + metric.getId())
+//              .build());
           nodes.add(ExecutionGraphNode.newBuilder()
             .setId("rate_" + metric.getId())
             .setType("Rate")
             .addSource(previous_node)
+            .setConfig(RateOptions.newBuilder(metric.getRateOptions())
+              .setId("rate_" + metric.getId())
+              .build())
             .build());
           previous_node = "rate_" + metric.getId();
         }
@@ -291,6 +293,7 @@ public class TSDBV2QueryContextBuilder implements QueryContextBuilder {
         final Filter filter = Strings.isNullOrEmpty(metric.getFilter()) ? null 
             : q.getFilter(metric.getFilter());
         if (filter != null) {
+          System.out.println("GB due to filter being set.");
           GroupByConfig.Builder gb_config = null;
           final Set<String> join_keys = Sets.newHashSet();
           for (TagVFilter v : filter.getTags()) {
@@ -317,15 +320,17 @@ public class TSDBV2QueryContextBuilder implements QueryContextBuilder {
                 !Strings.isNullOrEmpty(metric.getAggregator()) ?
                 metric.getAggregator() : q.getTime().getAggregator());
             
-            node_configs.add(gb_config.build());
+            //node_configs.add(gb_config.build());
             nodes.add(ExecutionGraphNode.newBuilder()
                 .setId("groupBy_" + metric.getId())
                 .setType("GroupBy")
                 .addSource(previous_node)
+                .setConfig(gb_config.build())
                 .build());
             previous_node = "groupBy_" + metric.getId();
           }
         } else if (!agg.toLowerCase().equals("none")) {
+          System.out.println("FILTER due to agg all");
           // we agg all 
           FillPolicy policy = downsampler == null ? 
               FillPolicy.NONE : downsampler.getFillPolicy().getPolicy();
@@ -343,11 +348,12 @@ public class TSDBV2QueryContextBuilder implements QueryContextBuilder {
               !Strings.isNullOrEmpty(metric.getAggregator()) ?
               metric.getAggregator() : q.getTime().getAggregator());
           
-          node_configs.add(gb_config.build());
+          //node_configs.add(gb_config.build());
           nodes.add(ExecutionGraphNode.newBuilder()
               .setId("groupBy_" + metric.getId())
               .setType("GroupBy")
               .addSource(previous_node)
+              .setConfig(gb_config.build())
               .build());
           previous_node = "groupBy_" + metric.getId();
         }
@@ -357,7 +363,7 @@ public class TSDBV2QueryContextBuilder implements QueryContextBuilder {
           .setId("TsdbV2Query")
           .setNodes(nodes)
           .build();
-      graph.setNodeConfigs(node_configs);
+      //graph.setNodeConfigs(node_configs);
       
       return graph;
     }

@@ -93,7 +93,8 @@ public class GroupBy extends AbstractQueryNode {
   @Override
   public void onNext(final QueryResult next) {
     if (next.idType() == Const.TS_BYTE_ID && 
-        config.getEncodedTagKeys() == null) {
+        config.getEncodedTagKeys() == null &&
+        config.getTagKeys() != null && !config.getTagKeys().isEmpty()) {
       class ResolveCB implements Callback<Object, List<byte[]>> {
 
         @Override
