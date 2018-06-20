@@ -39,17 +39,8 @@ import net.opentsdb.utils.DateTime;
  */
 @JsonInclude(Include.NON_NULL)
 @JsonDeserialize(builder = QuerySourceConfig.Builder.class)
-public class QuerySourceConfig implements QueryNodeConfig {
-  
-  /** The query from the caller. */
-  protected final TimeSeriesQuery query;
-  
-  /** A unique name for this config. */
-  private final String id;
-  
-  /** The configuration class in case we need to pull info out. */
-  private final Configuration configuration;
-  
+public class QuerySourceConfig extends BaseQueryNodeConfig {
+  private TimeSeriesQuery query;
   private final String start;
   private final TimeStamp start_ts;
   private final String end;
@@ -65,18 +56,14 @@ public class QuerySourceConfig implements QueryNodeConfig {
    * @param builder The non-null builder.
    */
   protected QuerySourceConfig(final Builder builder) {
+    super(builder);
 //    if (builder.query == null) {
 //      throw new IllegalArgumentException("Query cannot be null.");
 //    }
     if (Strings.isNullOrEmpty(builder.id)) {
       throw new IllegalArgumentException("ID cannot be null or empty.");
     }
-//    if (builder.configuration == null) {
-//      throw new IllegalArgumentException("Configuration cannot be null.");
-//    }
     query = builder.query;
-    id = builder.id;
-    configuration = builder.configuration;
     start = builder.start;
     end = builder.end;
     timezone = builder.timezone;
@@ -89,21 +76,14 @@ public class QuerySourceConfig implements QueryNodeConfig {
         DateTime.parseDateTimeString(end, timezone));
   }
   
-  /** @return The query the node is executing. */
-  public TimeSeriesQuery query() {
+  public TimeSeriesQuery getQuery() {
     return query;
   }
   
-  @Override
-  public String getId() {
-    return id;
+  public void setTimeSeriesQuery(final TimeSeriesQuery query) {
+    this.query = query;
   }
   
-  /** @return The master configuration class. */
-  public Configuration configuration() {
-    return configuration;
-  }
-
   /** @return user given start date/time, could be relative or absolute */
   public String getStart() {
     return start;
@@ -144,6 +124,12 @@ public class QuerySourceConfig implements QueryNodeConfig {
   }
   
   @Override
+  public boolean equals(Object o) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+  
+  @Override
   public int compareTo(final QueryNodeConfig o) {
     if (!(o instanceof QuerySourceConfig)) {
       return -1;
@@ -151,7 +137,7 @@ public class QuerySourceConfig implements QueryNodeConfig {
     
     return ComparisonChain.start()
         .compare(id, ((QuerySourceConfig) o).id, Ordering.natural().nullsFirst())
-        .compare(query, ((QuerySourceConfig) o).query, Ordering.natural().nullsFirst())
+        
         .result();
   }
 
@@ -163,9 +149,9 @@ public class QuerySourceConfig implements QueryNodeConfig {
   @Override
   public HashCode buildHashCode() {
     final List<HashCode> hashes = Lists.newArrayListWithCapacity(2);
-    hashes.add(Const.HASH_FUNCTION().newHasher().putString(id, 
+    hashes.add(Const.HASH_FUNCTION().newHasher().putString(id == null ? "null" : id, 
         Const.UTF8_CHARSET).hash());
-    hashes.add(query.buildHashCode());
+    //hashes.add(query.buildHashCode());
     return Hashing.combineOrdered(hashes);
   }
   
@@ -175,11 +161,11 @@ public class QuerySourceConfig implements QueryNodeConfig {
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
-  public static class Builder {
+  public static class Builder extends BaseQueryNodeConfig.Builder {
+    @JsonProperty
     private TimeSeriesQuery query;
     @JsonProperty
     private String id;
-    private Configuration configuration;
     @JsonProperty
     private String start;
     @JsonProperty
@@ -202,12 +188,6 @@ public class QuerySourceConfig implements QueryNodeConfig {
     /** @param id The non-null and non-empty ID for this config. */
     public Builder setId(final String id) {
       this.id = id;
-      return this;
-    }
-    
-    /** @param configuration The non-null master config. */
-    public Builder setConfiguration(final Configuration configuration) {
-      this.configuration = configuration;
       return this;
     }
     

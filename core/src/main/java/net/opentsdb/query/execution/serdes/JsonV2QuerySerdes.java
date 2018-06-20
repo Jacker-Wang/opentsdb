@@ -115,8 +115,8 @@ public class JsonV2QuerySerdes implements TimeSeriesSerdes, TSDBPlugin {
       throw new RuntimeException("WTF?", e);
     }
     
-    final net.opentsdb.query.pojo.TimeSeriesQuery query = 
-        (net.opentsdb.query.pojo.TimeSeriesQuery) context.query();
+//    final net.opentsdb.query.pojo.TimeSeriesQuery query = 
+//        (net.opentsdb.query.pojo.TimeSeriesQuery) context.query();
     final List<TimeSeries> series;
     final List<Deferred<TimeSeriesStringId>> deferreds;
     if (result.idType() == Const.TS_BYTE_ID) {
@@ -166,7 +166,7 @@ public class JsonV2QuerySerdes implements TimeSeriesSerdes, TSDBPlugin {
             TimeSeriesValue<? extends TimeSeriesDataType> value = 
                 (TimeSeriesValue<TimeSeriesDataType>) iterator.next();
             while (value != null && value.timestamp().compare(
-                Op.LT, query.getTime().startTime())) {
+                Op.LT, opts.start)) {
               if (iterator.hasNext()) {
                 value = (TimeSeriesValue<NumericType>) iterator.next();
               } else {
@@ -177,10 +177,8 @@ public class JsonV2QuerySerdes implements TimeSeriesSerdes, TSDBPlugin {
             if (value == null) {
               continue;
             }
-            if (value.timestamp().compare(Op.LT, 
-                      query.getTime().startTime()) ||
-                value.timestamp().compare(Op.GT, 
-                      query.getTime().endTime())) {
+            if (value.timestamp().compare(Op.LT, opts.start()) ||
+                value.timestamp().compare(Op.GT, opts.end)) {
               continue;
             }
             
@@ -208,8 +206,7 @@ public class JsonV2QuerySerdes implements TimeSeriesSerdes, TSDBPlugin {
             
             long ts = 0;
             while(value != null) {
-              if (value.timestamp().compare(Op.GT, 
-                  query.getTime().endTime())) {
+              if (value.timestamp().compare(Op.GT, opts.end())) {
                 break;
               }
               ts = (opts != null && opts.msResolution()) 

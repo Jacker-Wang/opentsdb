@@ -141,7 +141,7 @@ public class TestTsdb1xScanners extends UTBase {
     
     Tsdb1xScanners scanners = new Tsdb1xScanners(node, query);
     assertSame(node, scanners.node);
-    assertSame(query, scanners.query);
+    assertSame(query, scanners.source_config);
     assertFalse(scanners.pre_aggregate);
     assertFalse(scanners.skip_nsun_tagks);
     assertFalse(scanners.skip_nsun_tagvs);
@@ -184,7 +184,7 @@ public class TestTsdb1xScanners extends UTBase {
     
     Tsdb1xScanners scanners = new Tsdb1xScanners(node, query);
     assertSame(node, scanners.node);
-    assertSame(query, scanners.query);
+    assertSame(query, scanners.source_config);
     assertTrue(scanners.pre_aggregate);
     assertTrue(scanners.skip_nsun_tagks);
     assertTrue(scanners.skip_nsun_tagvs);

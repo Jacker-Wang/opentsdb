@@ -81,6 +81,10 @@ public interface QueryPipelineContext extends QueryNode {
    */
   public Collection<TimeSeriesDataSource> downstreamSources(final QueryNode node);
   
+  public Collection<QueryNode> upstreamOfType(final QueryNode node, final Class<? extends QueryNode> type);
+  
+  public Collection<QueryNode> downstreamOfType(final QueryNode node, final Class<? extends QueryNode> type);
+  
   /**
    * The collection of sinks given by the calling API that will receive final
    * results.

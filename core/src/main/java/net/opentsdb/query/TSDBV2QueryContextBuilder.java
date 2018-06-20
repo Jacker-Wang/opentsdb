@@ -231,7 +231,12 @@ public class TSDBV2QueryContextBuilder implements QueryContextBuilder {
         final QuerySourceConfig config = QuerySourceConfig.newBuilder()
             .setId(metric.getId())
             .setQuery(sub_query.build())
-            .setConfiguration(tsdb.getConfig())
+            .setStart(q.getTime().getStart())
+            .setEnd(q.getTime().getEnd())
+            .setTimezone(q.getTime().getTimezone())
+            .setFilterId(metric.getFilter())
+            .setMetric(metric.getMetric())
+            // TODO types
             .build();
         node_configs.add(config);
         

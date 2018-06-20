@@ -212,6 +212,33 @@ public class DownsampleConfig extends BaseQueryNodeConfigWithInterpolators
     return end;
   }
 
+  public String intervalAsString() {
+    switch (units) {
+    case NANOS:
+      return interval_part + "ns";
+    case MICROS:
+      return interval_part + "mu";
+    case MILLIS:
+      return interval_part + "ms";
+    case SECONDS:
+      return interval_part + "s";
+    case MINUTES:
+      return interval_part + "m";
+    case HOURS:
+      return interval_part + "h";
+    case DAYS:
+      return interval_part + "d";
+    case WEEKS:
+      return interval_part + "w";
+    case MONTHS:
+      return interval_part + "n";
+    case YEARS:
+      return interval_part + "y";
+    default:
+      throw new IllegalStateException("Unsupported units: " + units);
+    }
+  }
+  
   @Override
   public void updateTimestamp(final int offset, final TimeStamp timestamp) {
     if (offset < 0) {

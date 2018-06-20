@@ -14,7 +14,11 @@
 // limitations under the License.
 package net.opentsdb.query;
 
+import java.util.Map;
+
 import com.google.common.hash.HashCode;
+
+import net.opentsdb.configuration.Configuration;
 
 /**
  * The configuration interface for a particular query node. Queries will populate
@@ -32,4 +36,17 @@ public interface QueryNodeConfig extends Comparable<QueryNodeConfig> {
   /** @return A hash code for this configuration. */
   public HashCode buildHashCode();
   
+  public Map<String, String> getOverrides();
+  
+  public String getString(final Configuration config, final String key);
+  
+  public int getInt(final Configuration config, final String key);
+  
+  public long getLong(final Configuration config, final String key);
+  
+  public boolean getBoolean(final Configuration config, final String key);
+  
+  public double getDouble(final Configuration config, final String key);
+  
+  public boolean hasKey(final String key);
 }

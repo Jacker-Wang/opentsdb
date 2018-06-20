@@ -52,6 +52,8 @@ import net.opentsdb.query.QueryResult;
 import net.opentsdb.query.QuerySourceConfig;
 import net.opentsdb.query.pojo.Downsampler;
 import net.opentsdb.query.pojo.TimeSeriesQuery;
+import net.opentsdb.query.processor.downsample.Downsample;
+import net.opentsdb.query.processor.downsample.DownsampleConfig;
 import net.opentsdb.rollup.RollupInterval;
 import net.opentsdb.rollup.RollupUtils.RollupUsage;
 import net.opentsdb.stats.Span;
@@ -124,7 +126,7 @@ public class Tsdb1xQueryNode implements SourceNode {
   protected final boolean delete;
   
   /** Rollup intervals matching the query downsampler if applicable. */
-  protected final List<RollupInterval> rollup_intervals;
+  protected List<RollupInterval> rollup_intervals;
   
   /** Rollup fallback mode. */
   protected final RollupUsage rollup_usage;
@@ -153,82 +155,60 @@ public class Tsdb1xQueryNode implements SourceNode {
     this.context = context;
     this.id = id;
     this.config = config;
-    if (config.query() == null) {
-      throw new IllegalArgumentException("Can't execute a query without "
-          + "a query!");
-    }
-    if (config.configuration() == null) {
-      throw new IllegalArgumentException("Can't execute a query without "
-          + "a configuration in the source config!");
-    }
-    if (((TimeSeriesQuery) config.query()).getMetrics() == null || 
-        ((TimeSeriesQuery) config.query()).getMetrics().isEmpty() ||
-        ((TimeSeriesQuery) config.query()).getMetrics().size() > 1) {
-      throw new IllegalArgumentException("The node can only handle one metric at a time.");
-    }
+//    if (config.query() == null) {
+//      throw new IllegalArgumentException("Can't execute a query without "
+//          + "a query!");
+//    }
+//    if (context.tsdb().getConfig() == null) {
+//      throw new IllegalArgumentException("Can't execute a query without "
+//          + "a configuration in the source config!");
+//    }
+//    if (((TimeSeriesQuery) config.query()).getMetrics() == null || 
+//        ((TimeSeriesQuery) config.query()).getMetrics().isEmpty() ||
+//        ((TimeSeriesQuery) config.query()).getMetrics().size() > 1) {
+//      throw new IllegalArgumentException("The node can only handle one metric at a time.");
+//    }
     sequence_id = new AtomicLong();
     initialized = new AtomicBoolean();
     initializing = new AtomicBoolean();
     
-    final TimeSeriesQuery query = (TimeSeriesQuery) config.query();
-    if (query.hasKey(Tsdb1xHBaseDataStore.SKIP_NSUN_TAGK_KEY)) {
-      skip_nsun_tagks = query.getBoolean(config.configuration(), 
+    //final TimeSeriesQuery query = (TimeSeriesQuery) config.query();
+    if (config.hasKey(Tsdb1xHBaseDataStore.SKIP_NSUN_TAGK_KEY)) {
+      skip_nsun_tagks = config.getBoolean(context.tsdb().getConfig(), 
           Tsdb1xHBaseDataStore.SKIP_NSUN_TAGK_KEY);
     } else {
       skip_nsun_tagks = parent
           .dynamicBoolean(Tsdb1xHBaseDataStore.SKIP_NSUN_TAGK_KEY);
     }
-    if (query.hasKey(Tsdb1xHBaseDataStore.SKIP_NSUN_TAGV_KEY)) {
-      skip_nsun_tagvs = query.getBoolean(config.configuration(), 
+    if (config.hasKey(Tsdb1xHBaseDataStore.SKIP_NSUN_TAGV_KEY)) {
+      skip_nsun_tagvs = config.getBoolean(context.tsdb().getConfig(), 
           Tsdb1xHBaseDataStore.SKIP_NSUN_TAGV_KEY);
     } else {
       skip_nsun_tagvs = parent
           .dynamicBoolean(Tsdb1xHBaseDataStore.SKIP_NSUN_TAGV_KEY);
     }
-    if (query.hasKey(Tsdb1xHBaseDataStore.SKIP_NSUI_KEY)) {
-      skip_nsui = query.getBoolean(config.configuration(), 
+    if (config.hasKey(Tsdb1xHBaseDataStore.SKIP_NSUI_KEY)) {
+      skip_nsui = config.getBoolean(context.tsdb().getConfig(), 
           Tsdb1xHBaseDataStore.SKIP_NSUI_KEY);
     } else {
       skip_nsui = parent
           .dynamicBoolean(Tsdb1xHBaseDataStore.SKIP_NSUI_KEY);
     }
-    if (query.hasKey(Tsdb1xHBaseDataStore.DELETE_KEY)) {
-      delete = query.getBoolean(config.configuration(), 
+    if (config.hasKey(Tsdb1xHBaseDataStore.DELETE_KEY)) {
+      delete = config.getBoolean(context.tsdb().getConfig(), 
           Tsdb1xHBaseDataStore.DELETE_KEY);
     } else {
       delete = parent
           .dynamicBoolean(Tsdb1xHBaseDataStore.DELETE_KEY);
     }
-    if (query.hasKey(Tsdb1xHBaseDataStore.ROLLUP_USAGE_KEY)) {
-      rollup_usage = RollupUsage.parse(query.getString(config.configuration(),
+    if (config.hasKey(Tsdb1xHBaseDataStore.ROLLUP_USAGE_KEY)) {
+      rollup_usage = RollupUsage.parse(config.getString(context.tsdb().getConfig(),
           Tsdb1xHBaseDataStore.ROLLUP_USAGE_KEY));
     } else {
       rollup_usage = RollupUsage.parse(parent
           .dynamicString(Tsdb1xHBaseDataStore.ROLLUP_USAGE_KEY));
     }
     
-    if (parent.schema().rollupConfig() != null && 
-        rollup_usage != RollupUsage.ROLLUP_RAW) {
-      Downsampler ds = query.getMetrics().get(0).getDownsampler();
-      if (ds != null) {
-        rollup_intervals = parent.schema()
-            .rollupConfig().getRollupIntervals(
-                DateTime.parseDuration(ds.getInterval()) / 1000, 
-                ds.getInterval(), 
-                true);
-      } else if (query.getTime().getDownsampler() != null) {
-        ds = query.getTime().getDownsampler();
-        rollup_intervals = parent.schema()
-            .rollupConfig().getRollupIntervals(
-                DateTime.parseDuration(ds.getInterval()) / 1000, 
-                ds.getInterval(), 
-                true);
-      } else {
-        rollup_intervals = null;
-      }
-    } else {
-      rollup_intervals = null;
-    }
   }
 
   @Override
@@ -309,6 +289,25 @@ public class Tsdb1xQueryNode implements SourceNode {
     } else {
       child = null;
     }
+
+    if (parent.schema().rollupConfig() != null && 
+        rollup_usage != RollupUsage.ROLLUP_RAW) {
+      Collection<QueryNode> downsamplers = context.upstreamOfType(this, Downsample.class);
+      if (!downsamplers.isEmpty()) {
+        // TODO - find the lowest-common resolution if possible.
+        final DownsampleConfig ds = (DownsampleConfig) downsamplers.iterator().next();
+        rollup_intervals = parent.schema()
+            .rollupConfig().getRollupIntervals(
+                DateTime.parseDuration(ds.intervalAsString()) / 1000, 
+                ds.intervalAsString(), 
+                true);
+      } else {
+        rollup_intervals = null;
+      }
+    } else {
+      rollup_intervals = null;
+    }
+    
     upstream = context.upstream(this);
     downstream = context.downstream(this);
     downstream_sources = context.downstreamSources(this);
@@ -447,13 +446,12 @@ public class Tsdb1xQueryNode implements SourceNode {
   void setup(final Span span) {
     if (parent.schema().metaSchema() != null) {
       parent.schema().metaSchema()
-        .runQuery(config.query(), span)
+        .runQuery(config, span)
           .addCallback(new MetaCB(span))
           .addErrback(new MetaErrorCB(span));
     } else {
       synchronized (this) {
-        executor = new Tsdb1xScanners(Tsdb1xQueryNode.this, 
-            (TimeSeriesQuery) config.query());
+        executor = new Tsdb1xScanners(Tsdb1xQueryNode.this, config);
         if (initialized.compareAndSet(false, true)) {
           executor.fetchNext(new Tsdb1xQueryResult(
               sequence_id.incrementAndGet(), 
@@ -552,8 +550,7 @@ public class Tsdb1xQueryNode implements SourceNode {
       }
       
       synchronized (Tsdb1xQueryNode.this) {
-        executor = new Tsdb1xScanners(Tsdb1xQueryNode.this, 
-            (TimeSeriesQuery) config.query());
+        executor = new Tsdb1xScanners(Tsdb1xQueryNode.this, config);
         if (initialized.compareAndSet(false, true)) {
           executor.fetchNext(new Tsdb1xQueryResult(
               sequence_id.incrementAndGet(), 
@@ -620,9 +617,7 @@ public class Tsdb1xQueryNode implements SourceNode {
       }
       
       synchronized (this) {
-        executor = new Tsdb1xMultiGet(Tsdb1xQueryNode.this, 
-            (TimeSeriesQuery) config.query(), 
-            tsuids);
+        executor = new Tsdb1xMultiGet(Tsdb1xQueryNode.this, config, tsuids);
         if (initialized.compareAndSet(false, true)) {
           if (child != null) {
             child.setSuccessTags()
@@ -820,7 +815,7 @@ public class Tsdb1xQueryNode implements SourceNode {
           synchronized (this) {
             executor = new Tsdb1xMultiGet(
                 Tsdb1xQueryNode.this, 
-                (TimeSeriesQuery) config.query(), 
+                config, 
                 tsuids);
             if (initialized.compareAndSet(false, true)) {
               if (child != null) {

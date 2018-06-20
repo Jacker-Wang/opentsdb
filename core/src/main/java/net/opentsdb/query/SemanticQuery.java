@@ -1,15 +1,18 @@
 package net.opentsdb.query;
 
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.hash.HashCode;
 
 import net.opentsdb.core.Const;
 import net.opentsdb.core.TSDB;
 import net.opentsdb.query.execution.graph.ExecutionGraph;
+import net.opentsdb.query.execution.graph.ExecutionGraphNode;
 import net.opentsdb.query.pojo.Filter;
 import net.opentsdb.query.serdes.SerdesOptions;
 import net.opentsdb.utils.JSON;
@@ -19,7 +22,7 @@ public class SemanticQuery implements TimeSeriesQuery {
   private ExecutionGraph execution_graph;
   private List<QuerySinkConfig> sink_configs;
   private List<QuerySink> sinks;
-  private List<Filter> filters;
+  private Map<String, Filter> filters;
   private QueryMode mode;
   private List<SerdesOptions> serdes_options;
   
@@ -27,9 +30,31 @@ public class SemanticQuery implements TimeSeriesQuery {
     execution_graph = builder.execution_graph;
     sink_configs = builder.sink_configs;
     sinks = builder.sinks;
-    filters = builder.filters;
+    if (builder.filters != null) {
+      filters = Maps.newHashMap();
+      for (final Filter filter : builder.filters) {
+        filters.put(filter.getId(), filter);
+      }
+    } else {
+      filters = null;
+    }
     mode = builder.mode;
     serdes_options = builder.serdes_options;
+    
+    // set the query if needed
+    for (final ExecutionGraphNode node : execution_graph.getNodes()) {
+      if (node.getConfig() != null && 
+          node.getConfig() instanceof QuerySourceConfig &&
+          ((QuerySourceConfig) node.getConfig()).getQuery() == null) {
+        ((QuerySourceConfig) node.getConfig()).setTimeSeriesQuery(this);
+      }
+    }
+    for (final QueryNodeConfig config : execution_graph.nodeConfigs().values()) {
+      if (config instanceof QuerySourceConfig &&
+          ((QuerySourceConfig) config).getQuery() == null) {
+        ((QuerySourceConfig) config).setTimeSeriesQuery(this);
+      }
+    }
   }
   
   public ExecutionGraph getExecutionGraph() {
@@ -45,7 +70,7 @@ public class SemanticQuery implements TimeSeriesQuery {
   }
   
   public List<Filter> getFilters() {
-    return filters;
+    return Lists.newArrayList(filters.values());
   }
   
   public QueryMode getMode() {
@@ -54,6 +79,10 @@ public class SemanticQuery implements TimeSeriesQuery {
   
   public List<SerdesOptions> getSerdesOptions() {
     return serdes_options;
+  }
+  
+  public Filter getFilter(final String filter_id) {
+    return filters == null ? null : filters.get(filter_id);
   }
   
   @Override

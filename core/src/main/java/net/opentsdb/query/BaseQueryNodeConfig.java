@@ -14,16 +14,25 @@
 // limitations under the License.
 package net.opentsdb.query;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
+
+import net.opentsdb.configuration.Configuration;
 
 public abstract class BaseQueryNodeConfig implements QueryNodeConfig {
 
   /** A unique name for this config. */
   protected final String id;
   
+  protected final Map<String, String> overrides;
+  
   protected BaseQueryNodeConfig(final Builder builder) {
     id = builder.id;
+    overrides = builder.overrides;
   }
   
   @Override
@@ -37,6 +46,109 @@ public abstract class BaseQueryNodeConfig implements QueryNodeConfig {
     return id;
   }
   
+  @Override
+  public Map<String, String> getOverrides() {
+    return overrides;
+  }
+  
+  @Override
+  public String getString(final Configuration config, final String key) {
+    if (config == null) {
+      throw new IllegalArgumentException("Config cannot be null");
+    }
+    if (Strings.isNullOrEmpty(key)) {
+      throw new IllegalArgumentException("Key cannot be null or empty.");
+    }
+    String value = overrides == null ? null : overrides.get(key);
+    if (Strings.isNullOrEmpty(value)) {
+      if (config.hasProperty(key)) {
+        return config.getString(key);
+      }
+    }
+    return value;
+  }
+  
+  @Override
+  public int getInt(final Configuration config, final String key) {
+    if (config == null) {
+      throw new IllegalArgumentException("Config cannot be null");
+    }
+    if (Strings.isNullOrEmpty(key)) {
+      throw new IllegalArgumentException("Key cannot be null or empty.");
+    }
+    String value = overrides == null ? null : overrides.get(key);
+    if (Strings.isNullOrEmpty(value)) {
+      if (config.hasProperty(key)) {
+        return config.getInt(key);
+      }
+      throw new IllegalArgumentException("No value for key '" + key + "'");
+    }
+    return Integer.parseInt(value);
+  }
+  
+  @Override
+  public long getLong(final Configuration config, final String key) {
+    if (config == null) {
+      throw new IllegalArgumentException("Config cannot be null");
+    }
+    if (Strings.isNullOrEmpty(key)) {
+      throw new IllegalArgumentException("Key cannot be null or empty.");
+    }
+    String value = overrides == null ? null : overrides.get(key);
+    if (Strings.isNullOrEmpty(value)) {
+      if (config.hasProperty(key)) {
+        return config.getInt(key);
+      }
+      throw new IllegalArgumentException("No value for key '" + key + "'");
+    }
+    return Long.parseLong(value);
+  }
+  
+  @Override
+  public boolean getBoolean(final Configuration config, final String key) {
+    if (config == null) {
+      throw new IllegalArgumentException("Config cannot be null");
+    }
+    if (Strings.isNullOrEmpty(key)) {
+      throw new IllegalArgumentException("Key cannot be null or empty.");
+    }
+    String value = overrides == null ? null : overrides.get(key);
+    if (Strings.isNullOrEmpty(value)) {
+      if (config.hasProperty(key)) {
+        return config.getBoolean(key);
+      }
+      throw new IllegalArgumentException("No value for key '" + key + "'");
+    }
+    value = value.trim().toLowerCase();
+    return value.equals("true") || value.equals("1") || value.equals("yes");
+  }
+  
+  @Override
+  public double getDouble(final Configuration config, final String key) {
+    if (config == null) {
+      throw new IllegalArgumentException("Config cannot be null");
+    }
+    if (Strings.isNullOrEmpty(key)) {
+      throw new IllegalArgumentException("Key cannot be null or empty.");
+    }
+    String value = overrides == null ? null : overrides.get(key);
+    if (Strings.isNullOrEmpty(value)) {
+      if (config.hasProperty(key)) {
+        return config.getInt(key);
+      }
+      throw new IllegalArgumentException("No value for key '" + key + "'");
+    }
+    return Double.parseDouble(value);
+  }
+  
+  @Override
+  public boolean hasKey(final String key) {
+    if (Strings.isNullOrEmpty(key)) {
+      throw new IllegalArgumentException("Key cannot be null or empty.");
+    }
+    return overrides == null ? false : overrides.containsKey(key);
+  }
+  
   /** Base builder for QueryNodeConfig. */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static abstract class Builder {
@@ -44,12 +156,28 @@ public abstract class BaseQueryNodeConfig implements QueryNodeConfig {
     @JsonProperty
     protected String id;
     
+    @JsonProperty
+    protected Map<String, String> overrides;
+    
     /**
      * @param id An ID for this builder.
      * @return The builder.
      */
     public Builder setId(final String id) {
       this.id = id;
+      return this;
+    }
+    
+    public Builder setOverrides(final Map<String, String> overrides) {
+      this.overrides = overrides;
+      return this;
+    }
+    
+    public Builder addOverride(final String key, final String value) {
+      if (overrides == null) {
+        overrides = Maps.newHashMap();
+      }
+      overrides.put(key, value);
       return this;
     }
     

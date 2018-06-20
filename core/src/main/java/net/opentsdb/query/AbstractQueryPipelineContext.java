@@ -239,6 +239,49 @@ public abstract class AbstractQueryPipelineContext implements QueryPipelineConte
   }
   
   @Override
+  public Collection<QueryNode> upstreamOfType(final QueryNode node, 
+                                              final Class<? extends QueryNode> type) {
+    if (node == null) {
+      throw new IllegalArgumentException("Node cannot be null.");
+    }
+    if (!graph.containsVertex(node)) {
+      throw new IllegalArgumentException("The given node wasn't in this graph: " 
+          + node);
+    }
+    
+    final Set<DefaultEdge> upstream = graph.incomingEdgesOf(node);
+    if (upstream.isEmpty()) {
+      return Collections.emptyList();
+    }
+    
+    List<QueryNode> upstreams = null;
+    for (final DefaultEdge e : upstream) {
+      final QueryNode source = graph.getEdgeSource(e);
+      if (source.getClass().equals(type)) {
+        if (upstreams == null) {
+          upstreams = Lists.newArrayList();
+        }
+        upstreams.add(source);
+      } else {
+        final Collection<QueryNode> upstream_of_source = upstreamOfType(source, type);
+        if (!upstream_of_source.isEmpty()) {
+          if (upstreams == null) {
+            upstreams = Lists.newArrayList();
+          }
+          upstreams.addAll(upstream_of_source);
+        }
+      }
+    }
+    return upstreams == null ? Collections.emptyList() : upstreams;
+  }
+  
+  @Override
+  public Collection<QueryNode> downstreamOfType(final QueryNode node, 
+                                                final Class<? extends QueryNode> type) {
+    throw new UnsupportedOperationException("TODO");
+  }
+  
+  @Override
   public Collection<QuerySink> sinks() {
     return sinks;
   }
@@ -317,6 +360,7 @@ public abstract class AbstractQueryPipelineContext implements QueryPipelineConte
   
   @Override
   public void onNext(final QueryResult next) {
+    System.out.println("GOT A RESULT!!!: " + next.timeSeries());
     if (context.mode() == QueryMode.SINGLE) {
       synchronized(this) {
         if (single_results == null) {
@@ -370,11 +414,13 @@ public abstract class AbstractQueryPipelineContext implements QueryPipelineConte
   protected void initializeGraph(final Span span) {
     final Span child;
     if (span != null) {
-      child = span.newChild(getClass() + ".initializeGraph").start();
+      child = span.newChild(getClass() + ".initializeGraph")
+                  .withTag("graphId", execution_graph.getId())
+                  .start();
     } else {
       child = null;
     }
-  
+  System.out.println("INITIALIZE GRAPH: " + execution_graph.getId());
     final Map<String, QueryNodeConfig> node_configs = 
         execution_graph.nodeConfigs();
     final Map<String, QueryNode> map = 
@@ -401,6 +447,7 @@ public abstract class AbstractQueryPipelineContext implements QueryPipelineConte
         throw new IllegalArgumentException("No node factory found for "
             + "configuration " + node);
       }
+      System.out.println("FACTORY: " + factory);
       
       final QueryNode query_node;
       QueryNodeConfig node_config = node.getConfig() != null ? 
@@ -417,6 +464,7 @@ public abstract class AbstractQueryPipelineContext implements QueryPipelineConte
         throw new IllegalStateException("Factory returned a null "
             + "instance for " + node);
       }
+      System.out.println("GOT NODE: " + query_node);
       
       map.put(node.getId(), query_node);
       

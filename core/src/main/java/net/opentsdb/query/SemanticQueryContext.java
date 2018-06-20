@@ -135,8 +135,9 @@ public class SemanticQueryContext implements QueryContext {
       } else {
         child = null;
       }
-      
+      System.out.println("SETTING UP SEMANTIC CONTEXT GRAPH....");
       initializeGraph(child);
+      System.out.println("GRAPH all setup....");
       if (child != null) {
         child.setSuccessTags().finish();
       }
