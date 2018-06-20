@@ -975,8 +975,20 @@ public class Tsdb1xScanners implements HBaseExecutor {
     
     @Override
     public Object call(final List<ResolvedFilter> resolutions) throws Exception {
-      final Filter filter = ((SemanticQuery) source_config.getQuery())
-          .getFilter(source_config.getFilterId());
+      final Filter filter;
+      if (source_config.getQuery() instanceof SemanticQuery) {
+        filter = ((SemanticQuery) source_config.getQuery())
+            .getFilter(source_config.getFilterId());
+      } else if (source_config.getQuery() instanceof TimeSeriesQuery) {
+        filter = ((TimeSeriesQuery) source_config.getQuery())
+            .getFilter(source_config.getFilterId());
+      } else {
+        throw new UnsupportedOperationException("We don't support " 
+            + source_config.getQuery().getClass() + " yet");
+      }
+      if (filter == null) {
+        throw new IllegalStateException("No filter was found for: " + source_config.getFilterId());
+      }
       if (resolutions.size() != filter.getTags().size()) {
         throw new IllegalStateException("Fewer resolutions than filters!");
       }
