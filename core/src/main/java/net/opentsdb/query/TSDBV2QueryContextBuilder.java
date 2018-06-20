@@ -254,7 +254,6 @@ public class TSDBV2QueryContextBuilder implements QueryContextBuilder {
               .setAggregator(downsampler.getAggregator())
               .setInterval(downsampler.getInterval())
               .setFill(downsampler.getFillPolicy() != null ? true : false)
-              .setQuery(q)
               .setId("downsample_" + metric.getId())
               .addInterpolatorConfig(NumericInterpolatorConfig.newBuilder()
                         .setFillPolicy(policy)
@@ -263,7 +262,7 @@ public class TSDBV2QueryContextBuilder implements QueryContextBuilder {
                         .setType(NumericType.TYPE.toString())
                         .build());
           if (!Strings.isNullOrEmpty(downsampler.getTimezone())) {
-            ds.setTimeZone(ZoneId.of(downsampler.getTimezone()));
+            ds.setTimeZone(downsampler.getTimezone());
           }
           
           node_configs.add(ds.build());

@@ -295,7 +295,7 @@ public class Tsdb1xQueryNode implements SourceNode {
       Collection<QueryNode> downsamplers = context.upstreamOfType(this, Downsample.class);
       if (!downsamplers.isEmpty()) {
         // TODO - find the lowest-common resolution if possible.
-        final DownsampleConfig ds = (DownsampleConfig) downsamplers.iterator().next();
+        final DownsampleConfig ds = (DownsampleConfig) downsamplers.iterator().next().config();
         rollup_intervals = parent.schema()
             .rollupConfig().getRollupIntervals(
                 DateTime.parseDuration(ds.intervalAsString()) / 1000, 

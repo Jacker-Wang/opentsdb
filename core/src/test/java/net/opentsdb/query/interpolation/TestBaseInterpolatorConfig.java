@@ -20,8 +20,6 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
-import net.opentsdb.query.QueryInterpolatorConfig;
-
 public class TestBaseInterpolatorConfig {
 
   @Test

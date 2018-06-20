@@ -2,6 +2,7 @@ package net.opentsdb.servlet.resources;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collection;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
@@ -33,11 +34,13 @@ import net.opentsdb.auth.Authentication;
 import net.opentsdb.auth.AuthState.AuthStatus;
 import net.opentsdb.core.TSDB;
 import net.opentsdb.data.MillisecondTimeStamp;
+import net.opentsdb.data.TimeSeriesDataSource;
 import net.opentsdb.exceptions.QueryExecutionException;
 import net.opentsdb.query.QueryContext;
 import net.opentsdb.query.QueryMode;
 import net.opentsdb.query.QueryResult;
 import net.opentsdb.query.QuerySink;
+import net.opentsdb.query.QuerySourceConfig;
 import net.opentsdb.query.SemanticQuery;
 import net.opentsdb.query.SemanticQueryContext;
 import net.opentsdb.query.TSQuery;
@@ -293,12 +296,18 @@ public class RawQueryRpc {
     final SemanticQuery query = (SemanticQuery) request.getAttribute(QUERY_KEY);
     final QueryContext context = (QueryContext) request.getAttribute(CONTEXT_KEY);
     
-//    SerdesFactory factory = tsdb.getRegistry().getDefaultPlugin(SerdesFactory.class);
-//    if (factory == null) {
-//      throw new IllegalStateException("NO Default serdes!");
-//    }
-//    TimeSeriesSerdes serdes = factory.newInstance();
-    TimeSeriesSerdes serdes = new JsonV2QuerySerdes();
+    final SerdesFactory factory = result.source().pipelineContext().tsdb()
+        .getRegistry().getDefaultPlugin(SerdesFactory.class);
+    if (factory == null) {
+      throw new IllegalStateException("NO Default serdes!");
+    }
+    TimeSeriesSerdes serdes = factory.newInstance();
+    //TimeSeriesSerdes serdes = new JsonV2QuerySerdes();
+
+    // TODO - proper sources
+    final Collection<TimeSeriesDataSource> sources = 
+        result.source().pipelineContext().downstreamSources(result.source());
+    final QuerySourceConfig source_config = (QuerySourceConfig) sources.iterator().next().config();
     
     //final SerdesOptions options = query.getSerdesOptions().get(0);
     final SerdesOptions options = JsonV2QuerySerdesOptions.newBuilder()
@@ -306,8 +315,8 @@ public class RawQueryRpc {
 //        .setShowQuery(ts_query.getShowQuery())
 //        .setShowStats(ts_query.getShowStats())
 //        .setShowSummary(ts_query.getShowSummary())
-        .setStart(new MillisecondTimeStamp(1524528000000L))
-        .setEnd(new MillisecondTimeStamp(1524700800000L))
+        .setStart(source_config.startTime())
+        .setEnd(source_config.endTime())
         .setId("serdes")
         .build();
     
@@ -400,7 +409,7 @@ public class RawQueryRpc {
   
   Response handleException(final HttpServletRequest request) throws Exception {
     final QueryContext context = (QueryContext) request.getAttribute(CONTEXT_KEY);
-    final TimeSeriesQuery query = (TimeSeriesQuery) request.getAttribute(QUERY_KEY);
+    final SemanticQuery query = (SemanticQuery) request.getAttribute(QUERY_KEY);
     final Trace trace;
     if (context != null && context.stats().trace() != null) {
       trace = context.stats().trace();

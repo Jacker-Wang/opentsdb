@@ -38,6 +38,7 @@ public class SemanticQuery implements TimeSeriesQuery {
     } else {
       filters = null;
     }
+    System.out.println("FILTERS IN QUERY: " + filters);
     mode = builder.mode;
     serdes_options = builder.serdes_options;
     
@@ -196,11 +197,13 @@ public class SemanticQuery implements TimeSeriesQuery {
     
     node = root.get("filters");
     if (node != null) {
-      try {
-        builder.setFilters(JSON.getMapper().treeToValue(node, List.class));
-      } catch (JsonProcessingException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+      for (final JsonNode filter : node) {
+        try {
+          builder.addFilter(JSON.getMapper().treeToValue(filter, Filter.class));
+        } catch (JsonProcessingException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
       }
     }
     

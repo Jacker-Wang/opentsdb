@@ -25,6 +25,7 @@ import com.google.common.reflect.TypeToken;
 
 import net.opentsdb.configuration.Configuration;
 import net.opentsdb.query.BaseQueryNodeConfig.Builder;
+import net.opentsdb.query.interpolation.QueryInterpolatorConfig;
 
 /**
  * Base node config class that handles interpolation configs.
@@ -49,19 +50,19 @@ public abstract class BaseQueryNodeConfigWithInterpolators
   protected BaseQueryNodeConfigWithInterpolators(final Builder builder) {
     this.id = builder.id;
     this.overrides = builder.overrides;
-    if (builder.interpolator_configs != null && 
-        !builder.interpolator_configs.isEmpty()) {
+    if (builder.interpolatorConfigs != null && 
+        !builder.interpolatorConfigs.isEmpty()) {
       interpolator_configs = Maps.newHashMapWithExpectedSize(
-          builder.interpolator_configs.size());
-      for (final QueryInterpolatorConfig config : builder.interpolator_configs) {
+          builder.interpolatorConfigs.size());
+      for (final QueryInterpolatorConfig config : builder.interpolatorConfigs) {
         // TODO - may need to put this in the registry AND we want to 
         // figure out if the name is a full string or not.
         final Class<?> clazz;
         try {
-          clazz = Class.forName(config.type());
+          clazz = Class.forName(config.dataType());
         } catch (ClassNotFoundException e) {
           throw new IllegalArgumentException("No data type found for: " 
-              + config.type());
+              + config.dataType());
         }
         final TypeToken<?> type = TypeToken.of(clazz);
         if (interpolator_configs.containsKey(type)) {
@@ -204,7 +205,7 @@ public abstract class BaseQueryNodeConfigWithInterpolators
     @JsonProperty
     protected Map<String, String> overrides;
     @JsonProperty
-    protected List<QueryInterpolatorConfig> interpolator_configs;
+    protected List<QueryInterpolatorConfig> interpolatorConfigs;
     
     public Builder setId(final String id) {
       this.id = id;
@@ -225,15 +226,15 @@ public abstract class BaseQueryNodeConfigWithInterpolators
     }
     
     public Builder setInterpolatorConfigs(final List<QueryInterpolatorConfig> interpolator_configs) {
-      this.interpolator_configs = interpolator_configs;
+      this.interpolatorConfigs = interpolator_configs;
       return this;
     }
     
     public Builder addInterpolatorConfig(final QueryInterpolatorConfig interpolator_config) {
-      if (interpolator_configs == null) {
-        interpolator_configs = Lists.newArrayList();
+      if (interpolatorConfigs == null) {
+        interpolatorConfigs = Lists.newArrayList();
       }
-      interpolator_configs.add(interpolator_config);
+      interpolatorConfigs.add(interpolator_config);
       return this;
     }
     

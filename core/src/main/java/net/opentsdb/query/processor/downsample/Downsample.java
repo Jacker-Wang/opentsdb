@@ -15,6 +15,7 @@
 package net.opentsdb.query.processor.downsample;
 
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAmount;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -27,17 +28,23 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
 
+import net.opentsdb.common.Const;
 import net.opentsdb.data.TimeSeries;
+import net.opentsdb.data.TimeSeriesDataSource;
 import net.opentsdb.data.TimeSeriesDataType;
 import net.opentsdb.data.TimeSeriesId;
 import net.opentsdb.data.TimeSeriesValue;
 import net.opentsdb.data.TimeSpecification;
+import net.opentsdb.data.TimeStamp;
+import net.opentsdb.data.TimeStamp.Op;
+import net.opentsdb.data.ZonedNanoTimeStamp;
 import net.opentsdb.query.AbstractQueryNode;
 import net.opentsdb.query.QueryNode;
 import net.opentsdb.query.QueryNodeConfig;
 import net.opentsdb.query.QueryNodeFactory;
 import net.opentsdb.query.QueryPipelineContext;
 import net.opentsdb.query.QueryResult;
+import net.opentsdb.query.QuerySourceConfig;
 import net.opentsdb.query.processor.ProcessorFactory;
 import net.opentsdb.rollup.RollupConfig;
 
@@ -135,6 +142,12 @@ public class Downsample extends AbstractQueryNode {
     /** The downsampled resolution. */
     private final ChronoUnit resolution;
     
+    /** The snapped starting timestamp of the downsample span. */
+    private final TimeStamp start;
+    
+    /** The snapped final timestamp of the downsample span. */
+    private final TimeStamp end;
+    
     /**
      * Default ctor that dumps each time series into a new Downsampler time series.
      * @param results The non-null results set.
@@ -157,6 +170,43 @@ public class Downsample extends AbstractQueryNode {
         break;
       default:
         resolution = ChronoUnit.SECONDS;
+      }
+      
+      final Collection<TimeSeriesDataSource> sources = 
+          Downsample.this.pipelineContext().downstreamSources(Downsample.this);
+      // TODO matchy matchy
+      
+      final QuerySourceConfig source_config = 
+          (QuerySourceConfig) sources.iterator().next().config();
+      if (config.runAll()) {
+        start = source_config.startTime();
+        end = source_config.endTime();
+      } else if (config.timezone() != Const.UTC) {
+        start = new ZonedNanoTimeStamp(source_config.startTime().epoch(), 
+            source_config.startTime().nanos(), config.timezone());
+        start.snapToPreviousInterval(config.intervalPart(), config.units());
+        if (start.compare(Op.LT, source_config.startTime())) {
+          nextTimestamp(start);
+        }
+        end = new ZonedNanoTimeStamp(source_config.endTime().epoch(), 
+            source_config.endTime().nanos(), config.timezone());
+        end.snapToPreviousInterval(config.intervalPart(), config.units());
+        if (end.compare(Op.LTE, start)) {
+          throw new IllegalArgumentException("Snapped end time: " + end 
+              + " must be greater than the start time: " + start);
+        }
+      } else {
+        start = source_config.startTime().getCopy();
+        start.snapToPreviousInterval(config.intervalPart(), config.units());
+        if (start.compare(Op.LT, source_config.startTime())) {
+          nextTimestamp(start);
+        }
+        end = source_config.endTime().getCopy();
+        end.snapToPreviousInterval(config.intervalPart(), config.units());
+        if (end.compare(Op.LTE, start)) {
+          throw new IllegalArgumentException("Snapped end time: " + end 
+              + " must be greater than the start time: " + start);
+        }
       }
     }
     
@@ -203,7 +253,41 @@ public class Downsample extends AbstractQueryNode {
         results.close();
       }
     }
-
+    
+    public void updateTimestamp(final int offset, final TimeStamp timestamp) {
+      if (offset < 0) {
+        throw new IllegalArgumentException("Negative offsets are not allowed.");
+      }
+      if (timestamp == null) {
+        throw new IllegalArgumentException("Timestamp cannot be null.");
+      }
+      if (config.runAll()) {
+        timestamp.update(start);
+      } else {
+        final TimeStamp increment = new ZonedNanoTimeStamp(
+            start.epoch(), start.msEpoch(), start.timezone());
+        for (int i = 0; i < offset; i++) {
+          increment.add(config.duration());
+        }
+        timestamp.update(increment);
+      }
+    }
+    
+    public void nextTimestamp(final TimeStamp timestamp) {
+      if (config.runAll()) {
+        timestamp.update(start);
+      } else {
+        timestamp.add(config.duration());
+      }
+    }
+    
+    TimeStamp start() {
+      return start;
+    }
+    
+    TimeStamp end() {
+      return end;
+    }
     
     /**
      * The super simple wrapper around the time series source that generates 
@@ -239,7 +323,7 @@ public class Downsample extends AbstractQueryNode {
             ((ProcessorFactory) Downsample.this.factory()).newIterator(
                 type, 
                 Downsample.this, 
-                results,
+                DownsampleResult.this,
                 Lists.newArrayList(source));
         if (iterator != null) {
           return Optional.of(iterator);
@@ -256,7 +340,7 @@ public class Downsample extends AbstractQueryNode {
           iterators.add(((ProcessorFactory) Downsample.this.factory()).newIterator(
               type, 
               Downsample.this, 
-              results,
+              DownsampleResult.this,
               Lists.newArrayList(source)));
         }
         return iterators;

@@ -69,7 +69,7 @@ public class QuerySourceConfig extends BaseQueryNodeConfig {
     timezone = builder.timezone;
     types = builder.types;
     metric = builder.metric;
-    filter_id = builder.filter_id;
+    filter_id = builder.filterId;
     start_ts = new MillisecondTimeStamp(
         DateTime.parseDateTimeString(start, timezone));
     end_ts = new MillisecondTimeStamp(
@@ -177,7 +177,7 @@ public class QuerySourceConfig extends BaseQueryNodeConfig {
     @JsonProperty
     private String metric;
     @JsonProperty
-    private String filter_id;
+    private String filterId;
     
     /** @param query The non-null query to execute. */
     public Builder setQuery(final TimeSeriesQuery query) {
@@ -225,7 +225,7 @@ public class QuerySourceConfig extends BaseQueryNodeConfig {
     }
     
     public Builder setFilterId(final String filter_id) {
-      this.filter_id = filter_id;
+      this.filterId = filter_id;
       return this;
     }
     

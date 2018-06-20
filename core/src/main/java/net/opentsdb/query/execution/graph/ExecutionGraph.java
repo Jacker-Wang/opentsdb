@@ -297,7 +297,13 @@ public class ExecutionGraph implements Comparable<ExecutionGraph> {
       final ExecutionGraphNode.Builder node_builder = 
           ExecutionGraphNode.newBuilder();
       final String id = node.get("id").asText();
-      final String type = node.get("type").asText();
+      final JsonNode type_node = node.get("type");
+      final String type;
+      if (type_node != null) {
+         type = type_node.asText();
+      } else {
+        type = null;
+      }
       node_builder.setId(id);
       if (!Strings.isNullOrEmpty(type)) {
         node_builder.setType(type);

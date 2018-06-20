@@ -262,7 +262,7 @@ public class Tsdb1xScanners implements HBaseExecutor {
       Collection<QueryNode> downsamplers = node.context.upstreamOfType(node, Downsample.class);
       if (!downsamplers.isEmpty()) {
         // TODO - find the lowest-common resolution if possible.
-        ds_config = (DownsampleConfig) downsamplers.iterator().next();
+        ds_config = (DownsampleConfig) downsamplers.iterator().next().config();
         rollup_aggregation = DefaultRollupConfig.queryToRollupAggregation(
             ds_config.aggregator());
       } else {
@@ -616,6 +616,9 @@ public class Tsdb1xScanners implements HBaseExecutor {
           } else {
             throw new UnsupportedOperationException("We don't support " 
                 + source_config.getQuery().getClass() + " yet");
+          }
+          if (filter == null) {
+            throw new IllegalStateException("No filter was found for: " + source_config.getFilterId());
           }
           System.out.println("RESOLVING FILTER....");
           node.schema().resolveUids(filter, child)

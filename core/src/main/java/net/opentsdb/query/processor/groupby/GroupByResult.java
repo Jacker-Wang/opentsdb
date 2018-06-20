@@ -72,12 +72,14 @@ public class GroupByResult implements QueryResult {
    * @throws IllegalArgumentException if the node or result was null.
    */
   public GroupByResult(final GroupBy node, final QueryResult next) {
+    try {
     if (node == null) {
       throw new IllegalArgumentException("Node cannot be null.");
     }
     if (next == null) {
       throw new IllegalArgumentException("Query results cannot be null.");
     }
+    
     latch = new CountDownLatch(node.upstreams());
     this.node = node;
     this.next = next;
@@ -118,35 +120,39 @@ public class GroupByResult implements QueryResult {
         group.addSource(series);
       }
     } else if (next.idType().equals(Const.TS_BYTE_ID)) {
-      final List<byte[]> keys;
-      if (!((GroupByConfig) node.config()).groupAll() && 
-          ((GroupByConfig) node.config()).getEncodedTagKeys() == null) {
-        // resolve em
-        final Iterator<TimeSeries> iterator = next.timeSeries().iterator();
-        if (iterator.hasNext()) {
-          final TimeSeriesDataStore store = ((TimeSeriesByteId) 
-              iterator.next().id()).dataStore();
-          if (store == null) {
-            throw new RuntimeException("The data store was null for a byte series!");
-          }
-          try {
-            keys = store.encodeJoinKeys(
-                Lists.newArrayList(((GroupByConfig) node.config()).getTagKeys()), null /* TODO */)
-                .join(); // TODO <--- DO NOT JOIN here! Find a way to async it.
-          } catch (InterruptedException e) {
-            throw new QueryExecutionException("Unexpected interruption", 0, e);
-          } catch (Exception e) {
-            throw new QueryExecutionException("Unexpected exception", 0, e);
-          }
-        } else {
-//        // TODO - proper exception
-//        throw new RuntimeException("Time series IDs were returned as "
-//            + "bytes but no encoded tags were provided in the group-by config.");
-          keys = null;
-        }
-      } else {
-        keys = ((GroupByConfig) node.config()).getEncodedTagKeys();
-      }
+      System.out.println("HERERERE");
+      final List<byte[]> keys = ((GroupByConfig) node.config()).getEncodedTagKeys();
+//      if (!((GroupByConfig) node.config()).groupAll() && 
+//          ((GroupByConfig) node.config()).getEncodedTagKeys() == null) {
+//        // resolve em
+//        final Iterator<TimeSeries> iterator = next.timeSeries().iterator();
+//        if (iterator.hasNext()) {
+//          final TimeSeriesDataStore store = ((TimeSeriesByteId) 
+//              iterator.next().id()).dataStore();
+//          if (store == null) {
+//            throw new RuntimeException("The data store was null for a byte series!");
+//          }
+//          try {
+//            System.out.println("STORE: " + store);
+//            System.out.println("ENCODING KEYS: " + ((GroupByConfig) node.config()).getTagKeys());
+//            keys = store.encodeJoinKeys(
+//                Lists.newArrayList(((GroupByConfig) node.config()).getTagKeys()), null /* TODO */)
+//                .join(); // TODO <--- DO NOT JOIN here! Find a way to async it.
+//            System.out.println("JOINED properly....");
+//          } catch (InterruptedException e) {
+//            throw new QueryExecutionException("Unexpected interruption", 0, e);
+//          } catch (Exception e) {
+//            throw new QueryExecutionException("Unexpected exception", 0, e);
+//          }
+//        } else {
+////        // TODO - proper exception
+////        throw new RuntimeException("Time series IDs were returned as "
+////            + "bytes but no encoded tags were provided in the group-by config.");
+//          keys = null;
+//        }
+//      } else {
+//        keys = ((GroupByConfig) node.config()).getEncodedTagKeys();
+//      }
       
       for (final TimeSeries series : next.timeSeries()) {
         final TimeSeriesByteId id = (TimeSeriesByteId) series.id();
@@ -196,6 +202,11 @@ public class GroupByResult implements QueryResult {
     } else {
       // TODO - proper exception type
       throw new RuntimeException("Unhandled time series ID type: " + next.idType());
+    }
+    System.out.println("  INIT the gb result...");
+    } catch (Exception e) {
+      e.printStackTrace();
+      throw e;
     }
   }
   

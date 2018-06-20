@@ -12,13 +12,24 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package net.opentsdb.query;
+package net.opentsdb.query.interpolation;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 
 /**
  * A configuration class for an iterator interpolator.
  * 
  * @since 3.0
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonTypeInfo(use = Id.NAME,
+  include = JsonTypeInfo.As.PROPERTY,
+  property = "configType",
+  visible = true)
+@JsonTypeIdResolver(QueryInterpolatorConfigResolver.class)
 public interface QueryInterpolatorConfig {
 
   /** An optional string matching the name of an interpolator factory
@@ -34,5 +45,7 @@ public interface QueryInterpolatorConfig {
    * of a data type.
    * @return A non-null data type name.
    */
-  public String type();
+  public String dataType();
+  
+  public String configType();
 }
